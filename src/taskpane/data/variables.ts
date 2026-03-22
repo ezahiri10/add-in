@@ -4,7 +4,7 @@ export const VARIABLES: PlaceholderVariable[] = [
   {
     id: "student-name",
     label: "Student Name",
-    placeholder: "Student Name",
+    placeholder: "{{student_name}}",
     metadata: {
       variableKey: "student_name",
       studentId: 1,
@@ -15,7 +15,7 @@ export const VARIABLES: PlaceholderVariable[] = [
   {
     id: "course-title",
     label: "Course Title",
-    placeholder: "Course Title",
+    placeholder: "{{course_title}}",
     metadata: {
       variableKey: "course_title",
       studentId: null,
@@ -26,7 +26,7 @@ export const VARIABLES: PlaceholderVariable[] = [
   {
     id: "grade",
     label: "Grade",
-    placeholder: "Grade",
+    placeholder: "{{grade}}",
     metadata: {
       variableKey: "grade",
       studentId: 1,
