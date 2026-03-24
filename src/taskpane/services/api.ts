@@ -1,21 +1,14 @@
 import type { PlaceholderVariable } from "../types/variable";
 
-const BACKEND_URL = "";
+const BACKEND_URL = "http://localhost:3001";
 
 export type FetchVariablesResult =
   | { status: "ok"; variables: PlaceholderVariable[] }
-  | { status: "unauthorized" }
   | { status: "error"; message: string };
 
 export async function fetchVariables(): Promise<FetchVariablesResult> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/variables`, {
-      credentials: "include",
-    });
-
-    if (res.status === 401) {
-      return { status: "unauthorized" };
-    }
+    const res = await fetch(`${BACKEND_URL}/api/variables`);
 
     if (!res.ok) {
       return { status: "error", message: `Server error: ${res.status}` };

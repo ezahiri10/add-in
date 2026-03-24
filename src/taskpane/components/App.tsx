@@ -1,7 +1,6 @@
 import * as React from "react";
 import { fetchVariables } from "../services/api";
 import { insertVariableIntoWord } from "../services/wordService";
-import { authClient } from "../lib/auth-client";
 import type { PlaceholderVariable } from "../types/variable";
 
 /* global console */
@@ -13,29 +12,19 @@ interface AppProps {
 const App: React.FC<AppProps> = () => {
   const [variables, setVariables] = React.useState<PlaceholderVariable[]>([]);
   const [loadingVars, setLoadingVars] = React.useState(true);
-  const [unauthorized, setUnauthorized] = React.useState(false);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   const [isLoading, setIsLoading] = React.useState<string | null>(null);
   const [inserted, setInserted] = React.useState<PlaceholderVariable[]>([]);
 
-  // sign-in form state
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [signingIn, setSigningIn] = React.useState(false);
-  const [signInError, setSignInError] = React.useState<string | null>(null);
-
   const loadVariables = React.useCallback(async () => {
     setLoadingVars(true);
-    setUnauthorized(false);
     setFetchError(null);
 
     const result = await fetchVariables();
 
     if (result.status === "ok") {
       setVariables(result.variables);
-    } else if (result.status === "unauthorized") {
-      setUnauthorized(true);
     } else {
       setFetchError(result.message);
     }
@@ -61,83 +50,6 @@ const App: React.FC<AppProps> = () => {
       setIsLoading(null);
     }
   };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSignInError(null);
-    setSigningIn(true);
-    const { error } = await authClient.signIn.email({ email, password });
-    setSigningIn(false);
-    if (error) {
-      setSignInError(error.message ?? "Sign-in failed");
-      return;
-    }
-    await loadVariables();
-  };
-
-  // ── Not authenticated — inline sign-in form ─────────────────────────────────
-  if (unauthorized) {
-    return (
-      <main style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>
-        <h2 style={{ marginTop: 0 }}>Sign in</h2>
-        <p style={{ fontSize: "13px", color: "#666", marginBottom: "16px" }}>
-          Sign in to load your variables.
-        </p>
-        <form onSubmit={handleSignIn} style={{ display: "grid", gap: "10px" }}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{
-              padding: "8px 10px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              fontSize: "14px",
-              boxSizing: "border-box",
-              width: "100%",
-            }}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{
-              padding: "8px 10px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              fontSize: "14px",
-              boxSizing: "border-box",
-              width: "100%",
-            }}
-          />
-          {signInError && (
-            <p style={{ margin: 0, fontSize: "13px", color: "#c00" }}>{signInError}</p>
-          )}
-          <button
-            type="submit"
-            disabled={signingIn}
-            style={{
-              padding: "10px",
-              background: "#7c3aed",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: signingIn ? "not-allowed" : "pointer",
-              opacity: signingIn ? 0.7 : 1,
-            }}
-          >
-            {signingIn ? "Signing in…" : "Sign In"}
-          </button>
-        </form>
-      </main>
-    );
-  }
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loadingVars) {
