@@ -1,167 +1,106 @@
 import * as React from "react";
-import { fetchVariables } from "../services/api";
-import { insertVariableIntoWord } from "../services/wordService";
-import type { PlaceholderVariable } from "../types/variable";
+import ProgramSelector from "./ProgramSelector";
+import StudentTab from "./tabs/StudentTab";
+import ProgramTab from "./tabs/ProgramTab";
+import GradesTab from "./tabs/GradesTab";
+import type { Program, DocumentVariable } from "../types/variable";
+import { fetchPrograms, fetchDocumentVariables } from "../services/queries";
 
 /* global console */
 
-interface AppProps {
-  title: string;
-}
+type Tab = "student" | "program" | "grades";
 
-const App: React.FC<AppProps> = () => {
-  const [variables, setVariables] = React.useState<PlaceholderVariable[]>([]);
-  const [loadingVars, setLoadingVars] = React.useState(true);
-  const [fetchError, setFetchError] = React.useState<string | null>(null);
+const TABS: { key: Tab; label: string }[] = [
+  { key: "student", label: "Student" },
+  { key: "program", label: "Program" },
+  { key: "grades",  label: "Grades" },
+];
 
-  const [isLoading, setIsLoading] = React.useState<string | null>(null);
-  const [inserted, setInserted] = React.useState<PlaceholderVariable[]>([]);
+const App: React.FC<{ title: string }> = () => {
+  const [programs, setPrograms] = React.useState<Program[]>([]);
+  const [programsLoading, setProgramsLoading] = React.useState(true);
 
-  const loadVariables = React.useCallback(async () => {
-    setLoadingVars(true);
-    setFetchError(null);
+  const [docVars, setDocVars] = React.useState<DocumentVariable[]>([]);
+  const [docVarsLoading, setDocVarsLoading] = React.useState(true);
 
-    const result = await fetchVariables();
-
-    if (result.status === "ok") {
-      setVariables(result.variables);
-    } else {
-      setFetchError(result.message);
-    }
-
-    setLoadingVars(false);
-  }, []);
+  const [selectedProgram, setSelectedProgram] = React.useState<Program | null>(null);
+  const [activeTab, setActiveTab] = React.useState<Tab>("student");
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    loadVariables();
-  }, [loadVariables]);
+    fetchPrograms()
+      .then(setPrograms)
+      .catch((e) => { console.error(e); setError("Failed to load programs"); })
+      .finally(() => setProgramsLoading(false));
 
-  const handleInsert = async (variable: PlaceholderVariable) => {
-    try {
-      setIsLoading(variable.id);
-      await insertVariableIntoWord(variable);
-      setInserted((prev) => {
-        const alreadyExists = prev.some((v) => v.id === variable.id);
-        return alreadyExists ? prev : [...prev, variable];
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(null);
-    }
-  };
+    fetchDocumentVariables()
+      .then(setDocVars)
+      .catch((e) => { console.error(e); setError("Failed to load variables"); })
+      .finally(() => setDocVarsLoading(false));
+  }, []);
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
-  if (loadingVars) {
-    return (
-      <main style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>
-        <p style={{ fontSize: "14px", color: "#888" }}>Loading variables…</p>
-      </main>
-    );
-  }
+  const disabled = !selectedProgram;
 
-  // ── Fetch error ─────────────────────────────────────────────────────────────
-  if (fetchError) {
-    return (
-      <main style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>
-        <p style={{ fontSize: "14px", color: "#c00" }}>{fetchError}</p>
-        <button
-          onClick={loadVariables}
-          style={{
-            marginTop: "8px",
-            padding: "8px 14px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            background: "#fff",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Retry
-        </button>
-      </main>
-    );
-  }
-
-  // ── Variables list ──────────────────────────────────────────────────────────
   return (
-    <main style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>
-      <h2 style={{ marginTop: 0 }}>Transcript Variables</h2>
-      <p style={{ fontSize: "14px", color: "#555" }}>
-        Click a variable to insert it at the current cursor position.
-      </p>
+    <main style={{ fontFamily: "Arial, sans-serif", padding: "12px", height: "100%", boxSizing: "border-box" }}>
+      {/* Program selector */}
+      <ProgramSelector
+        programs={programs}
+        selected={selectedProgram}
+        onSelect={setSelectedProgram}
+        loading={programsLoading}
+      />
 
-      <div style={{ display: "grid", gap: "10px" }}>
-        {variables.map((variable) => (
+      {error && (
+        <p style={{ fontSize: "13px", color: "#c00", margin: "0 0 10px 0" }}>{error}</p>
+      )}
+
+      {/* Tab bar */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "2px solid #e0e0e0",
+          marginBottom: "14px",
+          gap: "2px",
+        }}
+      >
+        {TABS.map(({ key, label }) => (
           <button
-            key={variable.id}
-            onClick={() => handleInsert(variable)}
-            disabled={isLoading !== null}
+            key={key}
+            onClick={() => !disabled && setActiveTab(key)}
+            disabled={disabled}
             style={{
-              padding: "10px 12px",
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              background: "#fff",
-              cursor: "pointer",
-              textAlign: "left",
+              flex: 1,
+              padding: "8px 4px",
+              border: "none",
+              borderBottom: activeTab === key && !disabled ? "2px solid #7c3aed" : "2px solid transparent",
+              marginBottom: "-2px",
+              background: "none",
+              cursor: disabled ? "not-allowed" : "pointer",
+              fontSize: "13px",
+              fontWeight: activeTab === key && !disabled ? 700 : 400,
+              color: disabled ? "#bbb" : activeTab === key ? "#7c3aed" : "#555",
+              transition: "color 0.15s",
             }}
           >
-            <div style={{ fontWeight: 600 }}>{variable.label}</div>
-            <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
-              {variable.placeholder}
-            </div>
+            {label}
           </button>
         ))}
       </div>
 
-      {isLoading && (
-        <p style={{ marginTop: "12px", fontSize: "14px", color: "#888" }}>Inserting…</p>
-      )}
-
-      {inserted.length > 0 && (
-        <div style={{ marginTop: "20px" }}>
-          <h3 style={{ fontSize: "14px", marginBottom: "10px" }}>Inserted Variables</h3>
-          <div style={{ display: "grid", gap: "8px" }}>
-            {inserted.map((variable) => (
-              <div
-                key={variable.id}
-                style={{
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "8px",
-                  padding: "10px 12px",
-                  background: "#f9f9f9",
-                  fontSize: "13px",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: "6px" }}>{variable.label}</div>
-                <div style={{ color: "#555", lineHeight: "1.6" }}>
-                  <div>
-                    <span style={{ color: "#888" }}>key: </span>
-                    {variable.metadata.variableKey}
-                  </div>
-                  {variable.metadata.studentId != null && (
-                    <div>
-                      <span style={{ color: "#888" }}>studentId: </span>
-                      {variable.metadata.studentId}
-                    </div>
-                  )}
-                  {variable.metadata.courseId != null && (
-                    <div>
-                      <span style={{ color: "#888" }}>courseId: </span>
-                      {variable.metadata.courseId}
-                    </div>
-                  )}
-                  {variable.metadata.programId != null && (
-                    <div>
-                      <span style={{ color: "#888" }}>programId: </span>
-                      {variable.metadata.programId}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Tab content */}
+      {disabled ? (
+        <p style={{ fontSize: "13px", color: "#999", textAlign: "center", marginTop: "24px" }}>
+          Select a program to browse variables
+        </p>
+      ) : docVarsLoading ? (
+        <p style={{ fontSize: "13px", color: "#888" }}>Loading variables…</p>
+      ) : (
+        <>
+          {activeTab === "student" && <StudentTab variables={docVars} />}
+          {activeTab === "program" && <ProgramTab variables={docVars} />}
+          {activeTab === "grades" && <GradesTab programId={selectedProgram.id} />}
+        </>
       )}
     </main>
   );
