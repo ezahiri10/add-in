@@ -36,6 +36,7 @@ export async function fetchDocumentVariables(): Promise<DocumentVariable[]> {
         name
         label_en
         type
+        return_type
       }
     }
   `);

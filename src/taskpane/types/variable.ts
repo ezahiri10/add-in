@@ -7,6 +7,7 @@ export type DocumentVariable = {
   name: string;
   label_en: string;
   type: VariableType;
+  return_type: string; // 'date' | 'duration' | 'text' | ...
 };
 
 export type Program = {
@@ -111,6 +112,18 @@ export type VariableTag =
   | ExpressionTag
   | ConditionalExpressionTag
   | GradeValueTag;
+
+// ── Variable option types (for options form before insertion) ─────────────────
+
+export type VariableOptionKind = "date" | "duration" | "module" | "module_class";
+
+export function getVariableOptionKind(v: { name: string; return_type: string }): VariableOptionKind | null {
+  if (v.return_type === "date") return "date";
+  if (v.return_type === "duration") return "duration";
+  if (v.name.startsWith("recent_class_")) return "module_class";
+  if (v.name.startsWith("module_")) return "module";
+  return null;
+}
 
 // ── PlaceholderVariable (passed to wordService) ───────────────────────────────
 
