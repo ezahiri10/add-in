@@ -6,6 +6,7 @@ export type DocumentVariable = {
   id: number;
   name: string;
   label_en: string;
+  type: VariableType;
 };
 
 export type Program = {

@@ -1,7 +1,7 @@
 import * as React from "react";
 import SearchableList, { type ListItem } from "../shared/SearchableList";
 import type { DocumentVariable, PlaceholderVariable } from "../../types/variable";
-import { getDocVarSubcategory, subcategoryToVariableType } from "../../types/variable";
+import { getDocVarSubcategory } from "../../types/variable";
 import { insertVariableIntoWord } from "../../services/wordService";
 
 interface Props {
@@ -11,11 +11,10 @@ interface Props {
 const StudentTab: React.FC<Props> = ({ variables }) => {
   const [inserting, setInserting] = React.useState<number | null>(null);
 
-  const userVars = variables.filter((v) => getDocVarSubcategory(v.name) === "user");
-  const studentVars = variables.filter((v) => getDocVarSubcategory(v.name) === "student");
+  const userVars = variables.filter((v) => v.type === "user");
+  const studentVars = variables.filter((v) => v.type === "student");
 
   const handleInsert = async (_item: ListItem, docVar: DocumentVariable) => {
-    const sub = getDocVarSubcategory(docVar.name);
     const variable: PlaceholderVariable = {
       id: String(docVar.id),
       label: docVar.label_en,
@@ -24,7 +23,7 @@ const StudentTab: React.FC<Props> = ({ variables }) => {
         type: "document_variable",
         variableId: docVar.id,
         variableName: docVar.name,
-        variableType: subcategoryToVariableType(sub),
+        variableType: docVar.type,
         metadata: {},
       },
     };

@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { DocumentVariable, PlaceholderVariable } from "../../types/variable";
-import { getDocVarSubcategory, subcategoryToVariableType } from "../../types/variable";
+import { getDocVarSubcategory } from "../../types/variable";
 import { insertVariableIntoWord } from "../../services/wordService";
 
 interface Props {
@@ -27,8 +27,13 @@ const ProgramTab: React.FC<Props> = ({ variables }) => {
       institution: [], program: [], cohort: [], class: [], other: [],
     };
     for (const v of variables) {
-      const sub = getDocVarSubcategory(v.name);
-      if (sub in map) map[sub as Subcategory].push(v);
+      if (v.type === "organization") { map.institution.push(v); continue; }
+      if (v.type === "other") { map.other.push(v); continue; }
+      if (v.type === "program") {
+        const sub = getDocVarSubcategory(v.name);
+        const key = sub === "program" || sub === "cohort" || sub === "class" ? sub : "program";
+        map[key].push(v);
+      }
     }
     return map;
   }, [variables]);
@@ -39,7 +44,6 @@ const ProgramTab: React.FC<Props> = ({ variables }) => {
   };
 
   const handleInsert = async (v: DocumentVariable) => {
-    const sub = getDocVarSubcategory(v.name);
     const variable: PlaceholderVariable = {
       id: String(v.id),
       label: v.label_en,
@@ -48,7 +52,7 @@ const ProgramTab: React.FC<Props> = ({ variables }) => {
         type: "document_variable",
         variableId: v.id,
         variableName: v.name,
-        variableType: subcategoryToVariableType(sub),
+        variableType: v.type,
         metadata: {},
       },
     };

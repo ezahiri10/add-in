@@ -99,7 +99,7 @@ const App: React.FC<{ title: string }> = () => {
         <>
           {activeTab === "student" && <StudentTab variables={docVars} />}
           {activeTab === "program" && <ProgramTab variables={docVars} />}
-          {activeTab === "grades" && <GradesTab programId={selectedProgram.id} />}
+          {activeTab === "grades" && <GradesTab key={selectedProgram.id} programId={selectedProgram.id} />}
         </>
       )}
     </main>
