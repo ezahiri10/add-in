@@ -14,6 +14,16 @@ export type VariableOptions =
   | { kind: "module"; type: ModulePageType; order: number }
   | { kind: "module_class"; type: ModulePageType; order: number; classOrder: number };
 
+// ── InitialValues — used when pre-filling the form from existing tag metadata ─
+
+export type InitialValues = {
+  dateFormat?: DateFormat;
+  durationUnits?: Set<DurationUnit>;
+  moduleType?: ModulePageType;
+  moduleOrder?: number;
+  classOrder?: number;
+};
+
 // ── Convert VariableOptions → flat metadata Record<string,string> ─────────────
 
 export function optionsToMetadata(opts: VariableOptions): Record<string, string> {
@@ -28,6 +38,38 @@ export function optionsToMetadata(opts: VariableOptions): Record<string, string>
   }
   // module_class
   return { type: opts.type, order: String(opts.order), "class-order": String(opts.classOrder) };
+}
+
+// ── Convert flat metadata → InitialValues (for pre-filling from existing tag) ─
+
+export function metadataToInitialValues(
+  kind: NonNullable<ReturnType<typeof getVariableOptionKind>>,
+  metadata: Record<string, unknown>
+): InitialValues {
+  if (kind === "date") {
+    const fmt = metadata.formatString as DateFormat | undefined;
+    const validFormats: DateFormat[] = ["PPP", "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "MMMM yyyy"];
+    return { dateFormat: validFormats.includes(fmt as DateFormat) ? fmt : "PPP" };
+  }
+  if (kind === "duration") {
+    const raw = typeof metadata.formatString === "string" ? metadata.formatString : "";
+    const validUnits: DurationUnit[] = ["years", "months", "weeks", "days", "hours", "minutes", "seconds"];
+    const parsed = raw
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter((s): s is DurationUnit => validUnits.includes(s as DurationUnit));
+    return { durationUnits: new Set(parsed.length > 0 ? parsed : ["hours"]) };
+  }
+  // module or module_class
+  const validTypes: ModulePageType[] = ["any", "year", "semester", "module"];
+  const rawType = metadata.type as ModulePageType | undefined;
+  const moduleType: ModulePageType = validTypes.includes(rawType as ModulePageType) ? (rawType as ModulePageType) : "any";
+  const order = Math.max(0, Number(metadata.order) || 0);
+  if (kind === "module_class") {
+    const classOrder = Math.max(0, Number(metadata["class-order"]) || 0);
+    return { moduleType, moduleOrder: order, classOrder };
+  }
+  return { moduleType, moduleOrder: order };
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -58,16 +100,27 @@ interface Props {
   onBack: () => void;
   onInsert: (variable: DocumentVariable, options: VariableOptions) => void;
   inserting: boolean;
+  mode?: "insert" | "update";
+  initialValues?: InitialValues;
 }
 
-const VariableOptionsForm: React.FC<Props> = ({ variable, onBack, onInsert, inserting }) => {
+const VariableOptionsForm: React.FC<Props> = ({
+  variable,
+  onBack,
+  onInsert,
+  inserting,
+  mode = "insert",
+  initialValues = {},
+}) => {
   const kind = getVariableOptionKind(variable);
 
-  const [dateFormat, setDateFormat] = React.useState<DateFormat>("PPP");
-  const [durationUnits, setDurationUnits] = React.useState<Set<DurationUnit>>(new Set(["hours"]));
-  const [moduleType, setModuleType] = React.useState<ModulePageType>("any");
-  const [moduleOrder, setModuleOrder] = React.useState(1);
-  const [classOrder, setClassOrder] = React.useState(1);
+  const [dateFormat, setDateFormat] = React.useState<DateFormat>(initialValues.dateFormat ?? "PPP");
+  const [durationUnits, setDurationUnits] = React.useState<Set<DurationUnit>>(
+    initialValues.durationUnits ?? new Set(["hours"])
+  );
+  const [moduleType, setModuleType] = React.useState<ModulePageType>(initialValues.moduleType ?? "any");
+  const [moduleOrder, setModuleOrder] = React.useState(initialValues.moduleOrder ?? 1);
+  const [classOrder, setClassOrder] = React.useState(initialValues.classOrder ?? 1);
 
   const toggleUnit = (unit: DurationUnit) => {
     setDurationUnits((prev) => {
@@ -92,6 +145,7 @@ const VariableOptionsForm: React.FC<Props> = ({ variable, onBack, onInsert, inse
   };
 
   const canInsert = !inserting && !(kind === "duration" && durationUnits.size === 0);
+  const buttonLabel = mode === "update" ? (inserting ? "Updating…" : "Update") : (inserting ? "Inserting…" : "Insert");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -202,7 +256,7 @@ const VariableOptionsForm: React.FC<Props> = ({ variable, onBack, onInsert, inse
           width: "100%",
         }}
       >
-        {inserting ? "Inserting…" : "Insert"}
+        {buttonLabel}
       </button>
     </div>
   );

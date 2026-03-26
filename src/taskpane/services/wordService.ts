@@ -2,6 +2,14 @@
 
 import type { PlaceholderVariable } from "../types/variable";
 
+export async function updateContentControlTag(controlId: number, newTag: object): Promise<void> {
+  await Word.run(async (context) => {
+    const control = context.document.contentControls.getById(controlId);
+    control.tag = JSON.stringify(newTag);
+    await context.sync();
+  });
+}
+
 export async function insertVariableIntoWord(variable: PlaceholderVariable): Promise<void> {
   await Word.run(async (context) => {
     const selection = context.document.getSelection();
